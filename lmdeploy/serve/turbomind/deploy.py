@@ -813,12 +813,20 @@ def deploy_qwen(model_name: str, model_path: str, tokenizer_path: str,
     model_params = {}
 
     _files = [file for file in os.listdir(model_path) if file.endswith('.bin')]
+    if len(_files) == 0:
+        _files = [file for file in os.listdir(model_path) if file.endswith('.safetensors')]
     _files = sorted(_files)
     print(_files)
 
     _params = {}
     for _file in _files:
-        _tmp = torch.load(osp.join(model_path, _file), map_location='cpu')
+        if _file.endswith('.bin'):
+            _tmp = torch.load(osp.join(model_path, _file), map_location='cpu')
+        else:
+            with safetensors.safe_open(osp.join(model_path, _file), framework='pt', device='cpu') as f:
+                _tmp = {}
+                for k in f.keys():
+                    _tmp[k] = f.get_tensor(k)
         _params.update(_tmp)
 
     def get_tensor(name, trans=True):
